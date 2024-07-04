@@ -1,24 +1,31 @@
 package request_locker
 
 import (
+	"sync"
 	"time"
 )
 
 type Locker struct {
 	id          interface{}
 	holder      *SyncChannel[bool]
-	mu          Sync
+	mu          sync.Locker
 	lastChanged int64
 	asIdleAt    int64
+	ticker      time.Duration
 	root        *RootLocker
 }
 
-func NewLocker(id interface{}, asIdleAt int64, mu Sync) *Locker {
-	return &Locker{
+func NewLocker(id interface{}, asIdleAt int64, ticker time.Duration) *Locker {
+	locker := &Locker{
 		id:       id,
-		mu:       mu,
+		mu:       &sync.Mutex{},
 		asIdleAt: asIdleAt,
+		ticker:   ticker,
 	}
+	if asIdleAt == 0 {
+		locker.asIdleAt = DefaultTimeLockerAsIdle
+	}
+	return locker
 }
 
 func (l *Locker) Assign(holder *SyncChannel[bool]) {
@@ -52,7 +59,7 @@ func (l *Locker) Close() {
 }
 
 func (l *Locker) StartObserver() {
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(l.ticker)
 	for {
 		select {
 		case t := <-ticker.C:

@@ -2,12 +2,9 @@ package request_locker
 
 import "sync"
 
-type Sync interface {
-	Lock()
-	Unlock()
-	TryLock() bool
-}
-
+// SyncChannel struct with inner generic channel
+// that provides actions as a normal channel like read, write.
+// Avoid panic due to read, write to a close channel.
 type SyncChannel[T any] struct {
 	ch       chan T
 	isClosed bool

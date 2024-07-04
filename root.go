@@ -2,6 +2,7 @@ package request_locker
 
 import (
 	"sync"
+	"time"
 )
 
 type RootLocker struct {
@@ -11,8 +12,8 @@ type RootLocker struct {
 }
 
 type RootConfig struct {
-	mutexFunc MutexOpt
-	idleFunc  IdleOpt
+	idle   int64
+	ticker time.Duration
 }
 
 func NewRootLocker(config *RootConfig) *RootLocker {
@@ -27,7 +28,7 @@ func (r *RootLocker) AddHolder(id interface{}, holder *SyncChannel[bool]) (err e
 	r.mu.Lock()
 	locker, ok := r.lockers[id]
 	if !ok {
-		locker = NewLocker(id, r.config.idleFunc(), r.config.mutexFunc())
+		locker = NewLocker(id, r.config.idle, r.config.ticker)
 		locker.root = r
 		r.lockers[id] = locker
 		go locker.StartObserver()
