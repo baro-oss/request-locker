@@ -4,32 +4,30 @@ import (
 	"sync"
 )
 
-type Root struct {
+type RootLocker struct {
 	lockers map[interface{}]*Locker
 	mu      sync.Locker
 	config  *RootConfig
 }
 
 type RootConfig struct {
-	LockerOptFuncs []LockerOptFunc
+	mutexFunc MutexOpt
+	idleFunc  IdleOpt
 }
 
-func NewRoot(config *RootConfig) *Root {
-	return &Root{
+func NewRootLocker(config *RootConfig) *RootLocker {
+	return &RootLocker{
 		lockers: make(map[interface{}]*Locker),
 		mu:      &sync.Mutex{},
 		config:  config,
 	}
 }
 
-func (r *Root) AddHolder(id interface{}, holder chan bool) (err error) {
+func (r *RootLocker) AddHolder(id interface{}, holder *SyncChannel[bool]) (err error) {
 	r.mu.Lock()
 	locker, ok := r.lockers[id]
 	if !ok {
-		locker, err = NewLocker(id, r.config.LockerOptFuncs...)
-		if err != nil {
-			return
-		}
+		locker = NewLocker(id, r.config.idleFunc(), r.config.mutexFunc())
 		locker.root = r
 		r.lockers[id] = locker
 		go locker.StartObserver()

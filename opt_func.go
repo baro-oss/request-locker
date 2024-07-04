@@ -1,19 +1,16 @@
 package request_locker
 
-func LockerSyncOpt(sync Sync) func(*Locker) {
-	return func(locker *Locker) {
-		if rs, ok := sync.(*RedisSync); ok {
-			rs.key = locker.id.(string)
-			locker.mu = rs
-			return
-		}
+type MutexOpt func() Sync
+type IdleOpt func() int64
 
-		locker.mu = sync
+func DefaultMutexOpt(mu Sync) func() Sync {
+	return func() Sync {
+		return mu
 	}
 }
 
-func LockerIdleTimeOpt(t int64) func(*Locker) {
-	return func(locker *Locker) {
-		locker.asIdleAt = t
+func DefaultIdleOpt(t int64) func() int64 {
+	return func() int64 {
+		return t
 	}
 }
